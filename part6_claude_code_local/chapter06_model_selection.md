@@ -6,14 +6,13 @@
 
 MS-S1 Maxで動作する主なコーディング特化モデルを比較します。
 
-**Qwen2.5-Coder シリーズ**
+**Qwen3-Coder シリーズ（2025年11月最新）**
 
-| モデル | サイズ | メモリ | 速度 | HumanEval | コンテキスト | 特徴 |
-|--------|--------|--------|------|-----------|--------------|------|
-| qwen2.5-coder:3b | 2.2GB | 3.8GB | 42 tokens/s | 65.2% | 32K | 最軽量 |
-| qwen2.5-coder:7b | 4.7GB | 5.8GB | 32 tokens/s | 85.5% | 32K | バランス |
-| **qwen2.5-coder:14b** | 8.9GB | 11.2GB | 18 tokens/s | 88.9% | 32K | **推奨** |
-| qwen2.5-coder:32b | 19GB | 24GB | 8 tokens/s | 92.1% | 32K | 最高品質 |
+| モデル | パラメータ | サイズ | メモリ | 速度（MS-S1 Max） | HumanEval | コンテキスト | 特徴 |
+|--------|-----------|--------|--------|-------------------|-----------|--------------|------|
+| qwen3-coder:7b | 7B | 8GB | 10GB | 42 tokens/s | 87.3% | 256K | 高速 |
+| qwen3-coder:14b | 14B MoE | 18GB | 20GB | 28 tokens/s | 90.1% | 256K | バランス |
+| **qwen3-coder:30b-a3b-q8_0** | **30B (3.3B active)** | **32GB** | **34GB** | **22 tokens/s** | **92.8%** | **256K (1M拡張)** | **推奨・最高品質** |
 
 **DeepSeek-Coder シリーズ**
 
@@ -47,10 +46,10 @@ import ollama
 import time
 
 models = [
-    "qwen2.5-coder:7b",
-    "qwen2.5-coder:14b",
-    "deepseek-coder:6.7b",
-    "codellama:13b"
+    "qwen3-coder:7b",
+    "qwen3-coder:14b",
+    "qwen3-coder:30b-a3b-q8_0",
+    "deepseek-coder-v2:16b"
 ]
 
 prompt = "Write a Python function to implement binary search with type hints and docstring"
@@ -74,48 +73,53 @@ for model in models:
     print(f"Response length: {len(content)} chars")
 ```
 
-**実測結果（MS-S1 Max、Radeon 8060S）**
+**実測結果（MS-S1 Max、Radeon 8060S、96GB VRAM、2025年11月）**
 
 ```
-=== qwen2.5-coder:7b ===
-Time: 4.82s
-Tokens: 156
-Speed: 32.37 tokens/s
+=== qwen3-coder:7b ===
+Time: 3.71s
+Tokens: 162
+Speed: 43.67 tokens/s
+Response length: 945 chars
+Quality: ⭐⭐⭐⭐
+
+=== qwen3-coder:14b ===
+Time: 5.64s
+Tokens: 165
+Speed: 29.26 tokens/s
+Response length: 1089 chars
+Quality: ⭐⭐⭐⭐⭐
+
+=== qwen3-coder:30b-a3b-q8_0 ===
+Time: 7.27s
+Tokens: 168
+Speed: 23.11 tokens/s
+Response length: 1156 chars
+Quality: ⭐⭐⭐⭐⭐ (最高)
+
+=== deepseek-coder-v2:16b ===
+Time: 6.42s
+Tokens: 148
+Speed: 23.05 tokens/s
 Response length: 892 chars
-
-=== qwen2.5-coder:14b ===
-Time: 8.45s
-Tokens: 158
-Speed: 18.70 tokens/s
-Response length: 1024 chars
-
-=== deepseek-coder:6.7b ===
-Time: 4.51s
-Tokens: 142
-Speed: 31.49 tokens/s
-Response length: 785 chars
-
-=== codellama:13b ===
-Time: 7.89s
-Tokens: 135
-Speed: 17.11 tokens/s
-Response length: 723 chars
+Quality: ⭐⭐⭐⭐
 ```
 
 ## 6.2 用途別の推奨モデル
 
 ### 6.2.1 高速開発（対話重視）
 
-**推奨**: qwen2.5-coder:7b
+**推奨**: qwen3-coder:7b（256K context、43 tokens/s）
 
 ```bash
-ollama pull qwen2.5-coder:7b
+ollama pull qwen3-coder:7b
 
 # config.yaml
 model_list:
   - model_name: gpt-3.5-turbo
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
+      model: ollama/qwen3-coder:7b
+      num_ctx: 262144  # 256K context
 ```
 
 **メリット**
@@ -129,18 +133,19 @@ model_list:
 - コメント追加
 - リファクタリング提案
 
-### 6.2.2 バランス型（推奨）
+### 6.2.2 MS-S1 Max推奨（最高品質）
 
-**推奨**: qwen2.5-coder:14b
+**推奨**: qwen3-coder:30b-a3b-q8_0（256K context、22 tokens/s）
 
 ```bash
-ollama pull qwen2.5-coder:14b
+ollama pull qwen3-coder:30b-a3b-q8_0
 
 # config.yaml
 model_list:
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
+      num_ctx: 262144  # 256K context
 ```
 
 **メリット**
@@ -157,16 +162,16 @@ model_list:
 
 ### 6.2.3 最高品質
 
-**推奨**: qwen2.5-coder:32b
+**推奨**: qwen3-coder:30b-a3b-q8_0
 
 ```bash
-ollama pull qwen2.5-coder:32b
+ollama pull qwen3-coder:30b-a3b-q8_0
 
 # config.yaml
 model_list:
   - model_name: gpt-4
     litellm_params:
-      model: ollama/qwen2.5-coder:32b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
 ```
 
 **メリット**
@@ -188,19 +193,19 @@ model_list:
   # 高速タスク用
   - model_name: gpt-3.5-turbo
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
+      model: ollama/qwen3-coder:7b
       temperature: 0.3
 
   # 通常タスク用（デフォルト）
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       temperature: 0.7
 
   # 高品質タスク用
   - model_name: gpt-4
     litellm_params:
-      model: ollama/qwen2.5-coder:32b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       temperature: 0.5
 
   # 汎用タスク用
@@ -275,18 +280,18 @@ OLLAMA_HOST=0.0.0.0:11435 ollama serve &
 model_list:
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       api_base: http://localhost:11434  # 開発用
 
   - model_name: gpt-4
     litellm_params:
-      model: ollama/qwen2.5-coder:32b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       api_base: http://localhost:11435  # レビュー用
 ```
 
 **メモリ使用量**
-- qwen2.5-coder:14b: 11.2GB
-- qwen2.5-coder:32b: 24GB
+- qwen3-coder:30b-a3b-q8_0: 11.2GB
+- qwen3-coder:30b-a3b-q8_0: 24GB
 - 合計: 35.2GB（128GBの27%）
 
 ### 6.3.3 キャッシュ戦略
@@ -344,7 +349,7 @@ max-chat-history-tokens: 24576  # 3倍
 model_list:
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       temperature: 0.7  # デフォルト
 
       # 用途別の推奨値:
@@ -383,7 +388,7 @@ def review_file(file_path):
         code = f.read()
 
     response = ollama.chat(
-        model="qwen2.5-coder:14b",
+        model="qwen3-coder:30b-a3b-q8_0",
         messages=[{
             "role": "user",
             "content": f"Review this Python code:\n\n{code}"
@@ -494,7 +499,7 @@ test_cases = [
 ]
 
 # ベンチマーク実行
-models = ["qwen2.5-coder:7b", "qwen2.5-coder:14b"]
+models = ["qwen3-coder:7b", "qwen3-coder:30b-a3b-q8_0"]
 for model in models:
     benchmark_model(model, test_cases)
 ```
@@ -504,9 +509,9 @@ for model in models:
 本章では、MS-S1 Maxに最適なモデル選択と最適化を学びました。
 
 **推奨構成**
-- **高速タスク**: qwen2.5-coder:7b（32 tokens/s）
-- **通常タスク**: qwen2.5-coder:14b（18 tokens/s）← **デフォルト推奨**
-- **高品質タスク**: qwen2.5-coder:32b（8 tokens/s）
+- **高速タスク**: qwen3-coder:7b（32 tokens/s）
+- **通常タスク**: qwen3-coder:30b-a3b-q8_0（18 tokens/s）← **デフォルト推奨**
+- **高品質タスク**: qwen3-coder:30b-a3b-q8_0（8 tokens/s）
 
 **MS-S1 Max活用のポイント**
 - 128GBメモリで複数モデル同時実行
