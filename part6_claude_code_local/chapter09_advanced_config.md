@@ -175,31 +175,35 @@ sudo systemctl reload nginx
 ### 9.2.1 フォールバックとロードバランシング
 
 ```yaml
-# config.yaml (高度な設定)
+# config.yaml (高度な設定・2025年11月最新)
 model_list:
-  # プライマリモデル
+  # プライマリモデル（最高品質・30B Q8_0）
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       api_base: http://localhost:11434
+      num_ctx: 262144  # 256K context
       rpm: 60  # Requests per minute
 
-  # フォールバックモデル（プライマリが失敗時）
+  # フォールバックモデル（プライマリが失敗時・14B）
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
+      model: ollama/qwen3-coder:14b
       api_base: http://localhost:11434
+      num_ctx: 262144
 
-  # 複数インスタンスでロードバランシング
+  # 複数インスタンスでロードバランシング（30B Q8_0）
   - model_name: gpt-4
     litellm_params:
-      model: ollama/qwen2.5-coder:32b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       api_base: http://localhost:11434
+      num_ctx: 262144
 
   - model_name: gpt-4
     litellm_params:
-      model: ollama/qwen2.5-coder:32b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       api_base: http://localhost:11435  # 別インスタンス
+      num_ctx: 262144
 
 router_settings:
   # ロードバランシング戦略

@@ -74,17 +74,17 @@ $ grep master_key ~/litellm/config.yaml
 
 ```bash
 # 症状
-Error: Model 'qwen2.5-coder:14b' not found
+Error: Model 'qwen3-coder:30b-a3b-q8_0' not found
 
 # 原因確認
 $ ollama list
-# qwen2.5-coder:14bが表示されない
+# qwen3-coder:30b-a3b-q8_0が表示されない
 
 # 解決方法
-$ ollama pull qwen2.5-coder:14b
+$ ollama pull qwen3-coder:30b-a3b-q8_0
 
 # LiteLLM config.yamlの確認
-$ cat ~/litellm/config.yaml | grep qwen2.5-coder
+$ cat ~/litellm/config.yaml | grep qwen3-coder
 ```
 
 **問題: "Context length exceeded"**
@@ -161,17 +161,17 @@ Mem:          128Gi        95Gi        33Gi
 
 # Ollamaのメモリ使用量を確認
 $ ollama ps
-NAME                    ID              SIZE      UNTIL
-qwen2.5-coder:32b       abc123          24 GB     5 minutes
-qwen2.5-coder:14b       def456          11 GB     5 minutes
-# 合計35GB使用中
+NAME                         ID              SIZE      UNTIL
+qwen3-coder:30b-a3b-q8_0     abc123          34 GB     5 minutes
+qwen3-coder:14b              def456          20 GB     5 minutes
+# 合計54GB使用中（MS-S1 Maxは96GB VRAM + 128GB総メモリで余裕）
 ```
 
 **解決方法**
 
 ```bash
-# 方法1: 不要なモデルをアンロード
-$ ollama stop qwen2.5-coder:32b
+# 方法1: 不要なモデルをアンロード（MS-S1 Maxでは通常不要）
+$ ollama stop qwen3-coder:14b  # 軽量モデルをアンロード
 
 # 方法2: KEEP_ALIVEを短縮
 $ sudo nano /etc/systemd/system/ollama.service.d/override.conf
@@ -180,8 +180,9 @@ Environment="OLLAMA_KEEP_ALIVE=2m"  # 5mから短縮
 $ sudo systemctl daemon-reload
 $ sudo systemctl restart ollama
 
-# 方法3: より小さいモデルを使用
-> /model gpt-3.5-turbo  # qwen2.5-coder:7b
+# 方法3: より小さいモデルを使用（MS-S1 Maxでは通常不要）
+> /model gpt-3.5-turbo  # qwen3-coder:14b (20GB)
+> /model claude-3-haiku-20240307  # qwen3-coder:7b (10GB、最軽量)
 ```
 
 ### 8.2.3 ディスクI/O問題
@@ -232,7 +233,8 @@ $ sudo systemctl restart ollama
 model_list:
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
+      num_ctx: 262144  # 256K context
       temperature: 0.3  # 0.7から削減（より決定論的）
 ```
 
