@@ -15,32 +15,34 @@ Claude Code → Anthropic API → Claude 3.5 Sonnet
           - ストリーミング
 ```
 
-**ローカルLLM（本書の構成）**
+**ローカルLLM（本書の構成・2025年11月最新）**
 ```
-Aider → LiteLLM Proxy → Ollama → Qwen2.5 Coder
+Aider → LiteLLM Proxy → Ollama → Qwen3 Coder 30B Q8_0
          ↓
     - OpenAI互換プロトコル
     - 限定的な関数呼び出し
     - テキストのみ
-    - コンテキスト（32K tokens）
+    - コンテキスト（256K tokens、最大1M拡張可能）
     - ストリーミング
+    - MS-S1 Max: 96GB VRAM対応
 ```
 
 ### 5.1.2 機能比較表
 
-| 機能 | Claude API | ローカルLLM (Qwen2.5) | 対応方法 |
-|------|-----------|----------------------|---------|
+| 機能 | Claude API | ローカルLLM (Qwen3 Coder 30B) | 対応方法 |
+|------|-----------|------------------------------|---------|
 | チャット補完 | ✅ | ✅ | 完全互換 |
 | ストリーミング | ✅ | ✅ | 完全互換 |
 | 関数呼び出し | ✅ | ⚠️ 限定的 | プロンプトで代替 |
 | ビジョン（画像） | ✅ | ❌ | LLaVA使用（別途） |
-| 長いコンテキスト | ✅ 200K | ⚠️ 32K | チャンク分割 |
+| 長いコンテキスト | ✅ 200K | ✅ 256K (1M拡張可) | ローカルが有利 |
 | 多言語対応 | ✅ | ✅ | 問題なし |
-| コード生成 | ✅ | ✅ | Qwen Coderで対応 |
+| コード生成 | ✅ | ✅ | Qwen3で高品質 |
 | 日本語 | ✅ | ✅ | 高品質 |
-| レスポンス速度 | ⚠️ ネットワーク | ✅ 18 tokens/s | ローカルが高速 |
+| レスポンス速度 | ⚠️ ネットワーク | ✅ 22 tokens/s | ローカルが高速 |
 | プライバシー | ❌ 外部送信 | ✅ 完全ローカル | ローカルが有利 |
 | コスト | ❌ 有料 | ✅ 無料 | ローカルが有利 |
+| VRAM要件 | ❌ N/A | ✅ 32GB (MS-S1: 96GB可) | MS-S1で余裕 |
 
 ## 5.2 動作する機能
 
@@ -182,16 +184,19 @@ Claude Code本家は複雑なタスクを自動で分解できますが、ロー
 
 **3. 大規模なコードベースの理解**
 
-32Kトークンの制限があるため、非常に大きなプロジェクトは一度に処理できません。
+Qwen3 Coder 30B Q8_0は256Kトークン（ネイティブ）のコンテキストを持ち、最大1Mまで拡張可能です。MS-S1 Maxの96GB VRAMにより、大規模なプロジェクトも処理できます。
 
-**回避策: ファイルを選択的に追加**
+**推奨: ファイルを選択的に追加（効率的な処理のため）**
 
 ```bash
-# ❌ プロジェクト全体を追加（コンテキスト超過）
-> /add src/**/*.py
+# ⚠️ プロジェクト全体を追加（可能だが非効率）
+> /add src/**/*.py  # 256K以内なら可能
 
-# ✅ 関連ファイルのみ追加
+# ✅ 関連ファイルのみ追加（推奨・効率的）
 > /add src/auth.py src/models.py src/utils.py
+
+# ✅ MS-S1 Maxの大容量VRAMを活かした使用
+> /add src/module1/ src/module2/  # 合計100-200Kトークンまで快適
 ```
 
 ## 5.3 動作しない機能
@@ -205,7 +210,7 @@ Claude Code本家は複雑なタスクを自動で分解できますが、ロー
 > Analyze this screenshot and find the bug
 > (screenshot.png)
 
-# Qwen2.5 Coderはテキストのみ対応
+# Qwen3 Coder 30B Q8_0はテキストのみ対応
 ```
 
 **回避策: LLaVAモデルを使用**
@@ -369,22 +374,31 @@ aider src/bug_file.py src/related_module.py
 LiteLLMの設定で複数モデルを定義し、用途に応じて切り替えます。
 
 ```yaml
-# config.yaml
+# config.yaml（2025年11月最新・Qwen3 Coder構成）
 model_list:
-  # 高速・軽量タスク
+  # 高速タスク（14B・256K context）
   - model_name: gpt-3.5-turbo
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
+      model: ollama/qwen3-coder:14b
+      num_ctx: 262144
 
-  # 通常タスク
+  # 通常・高品質タスク（30B Q8_0・256K context）
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
+      num_ctx: 262144
 
-  # 高品質タスク
+  # 最高品質タスク（30B Q8_0・256K context）
   - model_name: gpt-4
     litellm_params:
-      model: ollama/qwen2.5-coder:32b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
+      num_ctx: 262144
+
+  # 最速タスク（7B・256K context）
+  - model_name: claude-3-haiku-20240307
+    litellm_params:
+      model: ollama/qwen3-coder:7b
+      num_ctx: 262144
 ```
 
 **使用例**

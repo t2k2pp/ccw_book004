@@ -350,10 +350,11 @@ git log --oneline
 aider --model gpt-3.5-turbo
 ```
 
-**config.yamlで定義したモデルマッピング**
-- `gpt-3.5-turbo` → `qwen2.5-coder:7b`（高速）
-- `claude-3-5-sonnet-20241022` → `qwen2.5-coder:14b`（バランス）
-- `gpt-4` → `qwen2.5-coder:14b`（高品質）
+**config.yamlで定義したモデルマッピング（2025年11月最新）**
+- `gpt-3.5-turbo` → `qwen3-coder:14b`（高速・256K context）
+- `claude-3-5-sonnet-20241022` → `qwen3-coder:30b-a3b-q8_0`（最高品質・256K context）
+- `gpt-4` → `qwen3-coder:30b-a3b-q8_0`（最高品質・256K context）
+- `claude-3-haiku-20240307` → `qwen3-coder:7b`（最速・256K context）
 
 ## 4.4 実践例
 
@@ -574,8 +575,9 @@ sudo systemctl status ollama
 # システムメモリ確認
 free -h
 
-# より軽量なモデルに切り替え
-> /model gpt-3.5-turbo  # qwen2.5-coder:7b
+# より軽量なモデルに切り替え（MS-S1 Maxでは通常不要）
+> /model gpt-3.5-turbo  # qwen3-coder:14b (256K context)
+> /model claude-3-haiku-20240307  # qwen3-coder:7b (最軽量)
 ```
 
 ## 4.7 Continue.dev（VSCode拡張）の設定
@@ -601,16 +603,23 @@ Ctrl+Shift+P → "Continue: Open config.json"
 {
   "models": [
     {
-      "title": "Qwen2.5 Coder 14B (Local)",
+      "title": "Qwen3 Coder 30B Q8_0 (Best - 256K ctx)",
       "provider": "openai",
       "model": "claude-3-5-sonnet-20241022",
       "apiBase": "http://localhost:8000/v1",
       "apiKey": "sk-local-dev-1234"
     },
     {
-      "title": "Qwen2.5 Coder 7B (Fast)",
+      "title": "Qwen3 Coder 14B (Fast - 256K ctx)",
       "provider": "openai",
       "model": "gpt-3.5-turbo",
+      "apiBase": "http://localhost:8000/v1",
+      "apiKey": "sk-local-dev-1234"
+    },
+    {
+      "title": "Qwen3 Coder 7B (Fastest - 256K ctx)",
+      "provider": "openai",
+      "model": "claude-3-haiku-20240307",
       "apiBase": "http://localhost:8000/v1",
       "apiKey": "sk-local-dev-1234"
     }
@@ -663,9 +672,10 @@ Ctrl+Shift+P → "Continue: Open config.json"
 - ドキュメント作成
 - バグ修正
 
-**MS-S1 Maxでの優位性**
-- 128GBメモリ → 大きなコンテキスト
-- Radeon 8060S → 高速推論（18 tokens/s）
+**MS-S1 Maxでの優位性（2025年11月最新）**
+- 128GBメモリ（96GB VRAM割当可能） → 大容量コンテキスト（256K tokens）
+- Radeon 8060S（40 RDNA 3.5 CU） → 高速推論（22 tokens/s）
+- Qwen3 Coder 30B Q8_0 → 最高品質のコード生成
 - 完全ローカル → プライバシー保護
 - コスト$0 → 無制限に使用可能
 

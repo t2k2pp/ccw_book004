@@ -49,7 +49,7 @@ Claude Code → [LiteLLM Proxy] → Ollama
 │  - Logging       │
 └────────┬─────────┘
          │ HTTP POST /api/chat
-         │ {model: "qwen2.5-coder:14b", messages: [...]}
+         │ {model: "qwen3-coder:30b-a3b-q8_0", messages: [...]}
          ↓
 ┌──────────────────┐
 │  Ollama          │
@@ -57,10 +57,10 @@ Claude Code → [LiteLLM Proxy] → Ollama
 └────────┬─────────┘
          │
          ↓
-┌──────────────────┐
-│  Qwen2.5 Coder   │
-│  (MS-S1 Max)     │
-└──────────────────┘
+┌──────────────────────────┐
+│  Qwen3 Coder 30B Q8_0   │
+│  (MS-S1 Max: 96GB VRAM) │
+└──────────────────────────┘
 ```
 
 ## 3.2 LiteLLMのインストール
@@ -130,10 +130,11 @@ nano ~/litellm/config.yaml
 model_list:
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       api_base: http://localhost:11434
       temperature: 0.7
       max_tokens: 4096
+      num_ctx: 262144  # 256K tokens context
 
 general_settings:
   master_key: sk-1234  # 任意のキー（ローカルなので簡易的でOK）
@@ -153,35 +154,38 @@ general_settings:
 # ~/litellm/config.yaml (フル機能版)
 
 model_list:
-  # Claudeモデルのマッピング
+  # Claudeモデルのマッピング（最高品質・30B Q8_0）
   - model_name: claude-3-5-sonnet-20241022
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       api_base: http://localhost:11434
       temperature: 0.7
       max_tokens: 4096
-      num_ctx: 32768  # コンテキスト長
+      num_ctx: 262144  # 256K tokens context
 
-  # GPT-4モデルのマッピング
+  # GPT-4モデルのマッピング（同じく30B使用）
   - model_name: gpt-4
     litellm_params:
-      model: ollama/qwen2.5-coder:14b
+      model: ollama/qwen3-coder:30b-a3b-q8_0
       api_base: http://localhost:11434
       temperature: 0.7
+      num_ctx: 262144
 
-  # 軽量モデル（高速用）
+  # 軽量モデル（高速用・14B）
   - model_name: gpt-3.5-turbo
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
+      model: ollama/qwen3-coder:14b
       api_base: http://localhost:11434
       temperature: 0.7
+      num_ctx: 262144
 
-  # 汎用モデル
+  # 超軽量モデル（最速・7B）
   - model_name: claude-3-haiku-20240307
     litellm_params:
-      model: ollama/qwen2.5:14b
+      model: ollama/qwen3-coder:7b
       api_base: http://localhost:11434
       temperature: 0.7
+      num_ctx: 262144
 
 litellm_settings:
   # デバッグログを有効化
@@ -252,10 +256,10 @@ EOF
 ```
 Config loaded successfully!
 Number of models: 4
-  - claude-3-5-sonnet-20241022 → ollama/qwen2.5-coder:14b
-  - gpt-4 → ollama/qwen2.5-coder:14b
-  - gpt-3.5-turbo → ollama/qwen2.5-coder:7b
-  - claude-3-haiku-20240307 → ollama/qwen2.5:14b
+  - claude-3-5-sonnet-20241022 → ollama/qwen3-coder:30b-a3b-q8_0 (256K context)
+  - gpt-4 → ollama/qwen3-coder:30b-a3b-q8_0 (256K context)
+  - gpt-3.5-turbo → ollama/qwen3-coder:14b (256K context)
+  - claude-3-haiku-20240307 → ollama/qwen3-coder:7b (256K context)
 ```
 
 ## 3.4 LiteLLMプロキシの起動
@@ -271,15 +275,15 @@ source venv/bin/activate
 litellm --config config.yaml --port 8000 --host 0.0.0.0
 ```
 
-**起動ログ例**
+**起動ログ例（2025年11月最新構成）**
 ```
 INFO: Starting LiteLLM Proxy Server
 INFO: Loaded config from config.yaml
 INFO: Loaded 4 models
-INFO:   - claude-3-5-sonnet-20241022 -> ollama/qwen2.5-coder:14b
-INFO:   - gpt-4 -> ollama/qwen2.5-coder:14b
-INFO:   - gpt-3.5-turbo -> ollama/qwen2.5-coder:7b
-INFO:   - claude-3-haiku-20240307 -> ollama/qwen2.5:14b
+INFO:   - claude-3-5-sonnet-20241022 -> ollama/qwen3-coder:30b-a3b-q8_0 (256K ctx)
+INFO:   - gpt-4 -> ollama/qwen3-coder:30b-a3b-q8_0 (256K ctx)
+INFO:   - gpt-3.5-turbo -> ollama/qwen3-coder:14b (256K ctx)
+INFO:   - claude-3-haiku-20240307 -> ollama/qwen3-coder:7b (256K ctx)
 INFO: Uvicorn running on http://0.0.0.0:8000
 INFO: Proxy server started successfully!
 ```
@@ -566,9 +570,10 @@ tmux attach -t litellm
 **ログの内容例**
 ```
 INFO: Request: POST /v1/chat/completions
-INFO: Model: claude-3-5-sonnet-20241022 -> ollama/qwen2.5-coder:14b
+INFO: Model: claude-3-5-sonnet-20241022 -> ollama/qwen3-coder:30b-a3b-q8_0
+INFO: Context: 256K tokens available
 INFO: Prompt tokens: 15, Completion tokens: 142
-INFO: Response time: 8.23s
+INFO: Response time: 7.54s (22 tokens/s)
 INFO: Status: 200
 ```
 

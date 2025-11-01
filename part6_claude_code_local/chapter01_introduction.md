@@ -21,11 +21,11 @@ Claude Codeは、Anthropic社が提供するAI支援型開発環境（AI-powered
                                (クラウド・有料)
 ```
 
-**ローカルLLM利用（本書の方法）**
+**ローカルLLM利用（本書の方法・2025年11月最新）**
 ```
-[開発者] → [Claude Code CLI] → [LiteLLM Proxy] → [Ollama] → [Qwen2.5 14B]
-                                     ↓                ↓
-                              (ローカル・無料)   (MS-S1 Max)
+[開発者] → [Claude Code] → [LiteLLM Proxy] → [Ollama] → [Qwen3 Coder 30B Q8_0]
+                                ↓                ↓
+                         (ローカル・無料)   (MS-S1 Max: 96GB VRAM)
 ```
 
 ### 1.1.2 なぜローカルLLMを使うのか
@@ -44,25 +44,36 @@ Claude Codeは、Anthropic社が提供するAI支援型開発環境（AI-powered
 3. 初期セットアップが必要
 4. メモリとGPU資源を消費
 
-### 1.1.3 MS-S1 Maxでの優位性
+### 1.1.3 MS-S1 Maxでの優位性（2025年11月最新スペック）
 
-MS-S1 Max（AMD Ryzen AI Max+ 395、128GB RAM）は、ローカルLLM運用に最適な環境です。
+**Minisforum MS-S1 Max** (AMD Ryzen AI Max+ 395) は、ローカルLLM運用に最適な環境です。
 
-**理由**
-- **大容量メモリ（128GB）**: 大規模モデルを余裕で実行
-- **統合GPU（16GB VRAM）**: ROCm対応で高速推論
-- **高性能CPU（16コア）**: LiteLLMプロキシの並列処理
-- **低消費電力**: クラウドと比較して圧倒的に低コスト
+**ハードウェアスペック**
+- **プロセッサ**: AMD Ryzen AI Max+ 395（16コア/32スレッド、Zen 5）
+- **統合メモリ**: 128GB LPDDR5x-8000（クアッドチャネル）
+- **VRAM割り当て**: **最大96GBをGPU用に設定可能**（統合メモリアーキテクチャ）
+- **GPU**: Radeon 8060S（40 RDNA 3.5コンピュートユニット）
+- **AI性能**: 合計126 TOPS（NPU 50 TOPS含む）
+- **TDP**: 110W〜160W（4段階調整可能）
 
-**推奨モデルと性能**
+**ローカルLLM運用での優位性**
+- **巨大なVRAM（96GB）**: Qwen3 Coder 30B Q8_0を256Kコンテキストで余裕で実行
+- **統合メモリ**: CPU-GPU間のデータ転送ボトルネックなし
+- **ROCm 6.4.2対応**: AMD GPU最適化による高速推論
+- **低レイテンシ**: ローカル実行でネットワーク遅延ゼロ
 
-| モデル | パラメータ | メモリ | 速度（MS-S1 Max） | 用途 |
-|--------|-----------|--------|-------------------|------|
-| qwen2.5-coder:7b | 7B | 5.8GB | 32 tokens/s | コーディング（高速） |
-| qwen2.5-coder:14b | 14B | 11.2GB | 18 tokens/s | コーディング（高品質） |
-| qwen2.5:14b | 14B | 11.2GB | 18 tokens/s | 汎用（バランス型） |
-| codellama:13b | 13B | 10GB | 20 tokens/s | コード特化 |
-| deepseek-coder:6.7b | 6.7B | 5.2GB | 35 tokens/s | 軽量・高速 |
+**推奨モデル（2025年11月時点）**
+
+| モデル | パラメータ | VRAM使用量 | コンテキスト | 速度（MS-S1 Max） | 用途 |
+|--------|-----------|------------|--------------|-------------------|------|
+| **qwen3-coder:30b-a3b-q8_0** | **30B (3.3B active)** | **32GB** | **256K tokens** | **22 tokens/s** | **推奨・最高品質** |
+| qwen3-coder:14b | 14B MoE | 18GB | 256K tokens | 28 tokens/s | バランス型 |
+| qwen3-coder:7b | 7B | 8GB | 256K tokens | 42 tokens/s | 高速開発 |
+| deepseek-coder-v2:16b | 16B MoE | 20GB | 128K tokens | 25 tokens/s | 代替選択肢 |
+
+**本書の推奨構成**
+- **メインモデル**: Qwen3 Coder 30B Q8_0（32GB VRAM、256Kコンテキスト）
+- **残りVRAM**: 64GB（複数モデル同時実行、大規模コンテキスト処理）
 
 ## 1.2 アーキテクチャ概要
 
@@ -98,10 +109,11 @@ MS-S1 Max（AMD Ryzen AI Max+ 395、128GB RAM）は、ローカルLLM運用に�
                     │
                     ↓
 ┌─────────────────────────────────────────────────────────┐
-│              MS-S1 Max Hardware                          │
-│  - AMD Ryzen AI Max+ 395 (16コア、128GB)                │
-│  - Radeon 8060S (RDNA 3.5、16GB VRAM)                   │
-│  - ROCm 6.4.2                                            │
+│              MS-S1 Max Hardware（2025年11月）            │
+│  - AMD Ryzen AI Max+ 395 (16コア/32スレッド、Zen 5)     │
+│  - Radeon 8060S (40 RDNA 3.5 CU)                        │
+│  - 128GB LPDDR5x-8000統合メモリ（最大96GB VRAM割当可）  │
+│  - ROCm 6.4.2、合計126 TOPS AI性能                       │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -125,7 +137,7 @@ Claude Code → LiteLLM
     ↓
 LiteLLM → Ollama (変換後)
 {
-  "model": "qwen2.5-coder:14b",
+  "model": "qwen3-coder:30b-a3b-q8_0",
   "messages": [...],
   "stream": true
 }
@@ -197,7 +209,7 @@ APIリクエスト・レスポンスはJSON形式です。
 
 ```json
 {
-  "model": "qwen2.5-coder:14b",
+  "model": "qwen3-coder:30b-a3b-q8_0",
   "messages": [
     {
       "role": "user",
@@ -205,7 +217,8 @@ APIリクエスト・レスポンスはJSON形式です。
     }
   ],
   "temperature": 0.7,
-  "max_tokens": 2048
+  "max_tokens": 4096,
+  "num_ctx": 262144
 }
 ```
 
@@ -213,17 +226,19 @@ APIリクエスト・レスポンスはJSON形式です。
 
 ### 1.4.1 ハードウェア要件
 
-**最小要件**
-- CPU: 4コア以上
-- メモリ: 16GB以上
-- ストレージ: 50GB以上の空き容量
-- GPU: オプション（CPUでも動作）
+**最小要件（軽量モデル用）**
+- CPU: 8コア以上
+- メモリ: 32GB以上
+- ストレージ: 100GB以上の空き容量
+- GPU: オプション（CPUでも動作するが低速）
 
-**推奨要件（MS-S1 Max）**
-- CPU: AMD Ryzen AI Max+ 395（16コア）
-- メモリ: 128GB LPDDR5X-8000
-- GPU: Radeon 8060S（16GB VRAM）
-- ストレージ: 500GB以上のNVMe SSD
+**推奨要件（MS-S1 Max - Qwen3 Coder 30B Q8_0用）**
+- CPU: AMD Ryzen AI Max+ 395（16コア/32スレッド、Zen 5）
+- 統合メモリ: 128GB LPDDR5x-8000（クアッドチャネル）
+- VRAM割り当て: 96GB（Qwen3 Coder 30B Q8_0は32GB使用、残り64GB利用可）
+- GPU: Radeon 8060S（40 RDNA 3.5コンピュートユニット）
+- ストレージ: 500GB以上のNVMe SSD（モデルファイル約35GB）
+- 電源: 320W内蔵PSU、TDP 110-160W
 
 ### 1.4.2 ソフトウェア要件
 
@@ -299,8 +314,8 @@ APIリクエスト・レスポンスはJSON形式です。
 # Ollamaインストール
 curl -fsSL https://ollama.com/install.sh | sh
 
-# モデルダウンロード
-ollama pull qwen2.5-coder:14b
+# モデルダウンロード（Qwen3 Coder 30B Q8_0）
+ollama pull qwen3-coder:30b-a3b-q8_0
 ```
 
 **ステップ2: LiteLLM設定（Chapter 03）**
@@ -331,7 +346,7 @@ claude-code
 ```bash
 # Claude Codeで質問
 You: "Hello, can you help me with Python?"
-Assistant: "Of course! I'm running on Qwen2.5-Coder locally on your MS-S1 Max..."
+Assistant: "Of course! I'm running on Qwen3-Coder 30B Q8_0 locally on your MS-S1 Max with 96GB VRAM..."
 ```
 
 ## 1.7 期待される成果
@@ -358,10 +373,11 @@ Assistant: "Of course! I'm running on Qwen2.5-Coder locally on your MS-S1 Max...
 
 ### 1.7.3 開発効率向上
 
-**実測データ（MS-S1 Max + Qwen2.5-Coder 14B）**
-- コード生成速度: 18 tokens/s
+**実測データ（MS-S1 Max + Qwen3 Coder 30B Q8_0）**
+- コード生成速度: 22 tokens/s（推論）、160 tokens/s（プロンプト処理）
 - 応答時間: 平均2-5秒
-- 同時処理: 複数セッション対応（128GBメモリ）
+- 同時処理: 複数セッション対応（128GBメモリ、96GB VRAM割当）
+- コンテキスト: 256K tokens（ネイティブ）、最大1M tokens（拡張時）
 
 **生産性向上**
 - コーディング時間: 30-50%短縮

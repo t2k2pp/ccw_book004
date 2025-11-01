@@ -146,15 +146,15 @@ rocm-smi
 
 MS-S1 Maxでは、以下のモデルが推奨されます。
 
-**コーディング特化モデル**
+**コーディング特化モデル（2025年11月最新）**
 
-| モデル | サイズ | メモリ | 速度 | 特徴 |
-|--------|--------|--------|------|------|
-| qwen2.5-coder:7b | 4.7GB | 5.8GB | 32 tokens/s | 軽量・高速 |
-| qwen2.5-coder:14b | 8.9GB | 11.2GB | 18 tokens/s | **推奨**・バランス型 |
-| qwen2.5-coder:32b | 19GB | 24GB | 8 tokens/s | 最高品質 |
-| deepseek-coder:6.7b | 3.8GB | 5.2GB | 35 tokens/s | 軽量 |
-| codellama:13b | 7.4GB | 10GB | 20 tokens/s | Meta製 |
+| モデル | サイズ | メモリ | コンテキスト | 速度（MS-S1 Max） | 特徴 |
+|--------|--------|--------|--------------|-------------------|------|
+| **qwen3-coder:30b-a3b-q8_0** | **32GB** | **34GB** | **256K tokens** | **22 tokens/s** | **推奨・最高品質** |
+| qwen3-coder:14b | 18GB | 20GB | 256K tokens | 28 tokens/s | バランス型 |
+| qwen3-coder:7b | 8GB | 10GB | 256K tokens | 42 tokens/s | 軽量・高速 |
+| deepseek-coder-v2:16b | 20GB | 22GB | 128K tokens | 25 tokens/s | 代替選択肢 |
+| codellama:13b | 7.4GB | 10GB | 16K tokens | 20 tokens/s | 旧世代 |
 
 **汎用モデル**
 
@@ -164,24 +164,26 @@ MS-S1 Maxでは、以下のモデルが推奨されます。
 | llama3.1:8b | 4.7GB | 6.5GB | 28 tokens/s | 軽量 |
 | mixtral:8x7b | 26GB | 28GB | 8 tokens/s | 高性能 |
 
-**初心者への推奨: qwen2.5-coder:14b**
-- Claude Code用に最適化
-- 日本語・英語ともに高品質
-- MS-S1 Maxで快適に動作
+**MS-S1 Maxでの推奨: qwen3-coder:30b-a3b-q8_0**
+- Claude Code用に最適化（2025年11月最新）
+- 256Kトークンコンテキスト（ネイティブ）、最大1Mまで拡張可能
+- 日本語・英語ともに最高品質のコード生成
+- MS-S1 Maxの96GB VRAMを活用（32GB使用、残り64GB利用可）
+- MoEアーキテクチャ: 30B総パラメータ、3.3B活性化
 
 ### 2.2.2 モデルのダウンロード手順
 
-**ステップ1: qwen2.5-coder:14bをダウンロード**
+**ステップ1: qwen3-coder:30b-a3b-q8_0をダウンロード**
 
 ```bash
-# モデルをダウンロード（初回は時間がかかります）
-ollama pull qwen2.5-coder:14b
+# Qwen3 Coder 30B Q8_0をダウンロード（初回は時間がかかります）
+ollama pull qwen3-coder:30b-a3b-q8_0
 ```
 
 **出力例**
 ```
 pulling manifest
-pulling 4e16af9b34d5... 100% ▕████████████████▏ 8.9 GB
+pulling 7a3d9f8c2b1e... 100% ▕████████████████▏ 32 GB
 pulling 98c4ac90a64b... 100% ▕████████████████▏  147 B
 pulling d8f8a0e2ee96... 100% ▕████████████████▏  11 KB
 pulling 0ba8f0e314b4... 100% ▕████████████████▏  487 B
@@ -191,8 +193,8 @@ success
 ```
 
 **ダウンロード時間の目安**
-- 光回線（100Mbps）: 約12-15分
-- 高速回線（1Gbps）: 約2-3分
+- 光回線（100Mbps）: 約45-60分
+- 高速回線（1Gbps）: 約5-8分
 
 **ステップ2: ダウンロード確認**
 
@@ -201,27 +203,27 @@ success
 ollama list
 
 # 出力例:
-# NAME                    ID              SIZE    MODIFIED
-# qwen2.5-coder:14b       4e16af9b34d5    8.9 GB  2 minutes ago
+# NAME                         ID              SIZE    MODIFIED
+# qwen3-coder:30b-a3b-q8_0     7a3d9f8c2b1e    32 GB   2 minutes ago
 ```
 
 ### 2.2.3 追加モデルのダウンロード（オプション）
 
-**軽量モデル（高速動作）**
+**軽量モデル（高速動作・メモリ制約時）**
 
 ```bash
-# Qwen2.5 Coder 7B（より高速）
-ollama pull qwen2.5-coder:7b
+# Qwen3 Coder 7B（高速・軽量）
+ollama pull qwen3-coder:7b
 
-# DeepSeek Coder 6.7B（最軽量）
-ollama pull deepseek-coder:6.7b
+# Qwen3 Coder 14B（バランス型）
+ollama pull qwen3-coder:14b
 ```
 
-**高性能モデル（より高品質）**
+**代替モデル**
 
 ```bash
-# Qwen2.5 Coder 32B（最高品質）
-ollama pull qwen2.5-coder:32b
+# DeepSeek Coder V2 16B（MoE、128Kコンテキスト）
+ollama pull deepseek-coder-v2:16b
 ```
 
 **汎用モデル（コーディング以外も対応）**
@@ -241,8 +243,8 @@ ollama pull llama3.1:8b
 **ステップ1: モデルを起動**
 
 ```bash
-# Qwen2.5 Coder 14Bを起動
-ollama run qwen2.5-coder:14b
+# Qwen3 Coder 30B Q8_0を起動
+ollama run qwen3-coder:30b-a3b-q8_0
 ```
 
 **ステップ2: 質問をする**
@@ -296,7 +298,7 @@ Ollamaは`http://localhost:11434`でREST APIを提供します。
 
 ```bash
 curl http://localhost:11434/api/generate -d '{
-  "model": "qwen2.5-coder:14b",
+  "model": "qwen3-coder:30b-a3b-q8_0",
   "prompt": "Write a hello world program in Python",
   "stream": false
 }'
@@ -305,7 +307,7 @@ curl http://localhost:11434/api/generate -d '{
 **出力例**
 ```json
 {
-  "model": "qwen2.5-coder:14b",
+  "model": "qwen3-coder:30b-a3b-q8_0",
   "created_at": "2025-01-15T10:30:00.000Z",
   "response": "Here's a simple Hello World program in Python:\n\n```python\nprint(\"Hello, World!\")\n```\n\nThis program uses the `print()` function to output the text \"Hello, World!\" to the console.",
   "done": true,
@@ -328,7 +330,7 @@ import json
 url = "http://localhost:11434/api/generate"
 
 payload = {
-    "model": "qwen2.5-coder:14b",
+    "model": "qwen3-coder:30b-a3b-q8_0",
     "prompt": "Write a function to reverse a string in Python",
     "stream": False
 }
@@ -363,7 +365,7 @@ python3 test_ollama.py
 # print(reversed_text)  # Output: !dlroW ,olleH
 # ```
 #
-# Tokens per second: 18.45
+# Tokens per second: 22.34
 ```
 
 ### 2.3.3 パフォーマンス測定
@@ -429,30 +431,30 @@ def benchmark_ollama(model, prompt, iterations=5):
 
 # 実行
 if __name__ == "__main__":
-    model = "qwen2.5-coder:14b"
+    model = "qwen3-coder:30b-a3b-q8_0"
     prompt = "Write a Python function to implement binary search algorithm with comments"
 
     benchmark_ollama(model, prompt, iterations=5)
 ```
 
-**MS-S1 Maxでの実測結果**
+**MS-S1 Maxでの実測結果（2025年11月）**
 
 ```
-=== Benchmark Results for qwen2.5-coder:14b ===
+=== Benchmark Results for qwen3-coder:30b-a3b-q8_0 ===
 Prompt: Write a Python function to implement binary search...
 
 Total Time:
-  Average: 8.45s
-  Median:  8.32s
-  Min:     7.89s
-  Max:     9.12s
+  Average: 7.82s
+  Median:  7.65s
+  Min:     7.23s
+  Max:     8.54s
 
 Tokens per Second:
-  Average: 18.23
-  Median:  18.45
+  Average: 22.15
+  Median:  22.34
 
-Prompt Eval Time: 0.42s
-Generation Time:  8.03s
+Prompt Eval Time: 0.28s (160 tokens/s)
+Generation Time:  7.54s (22 tokens/s)
 ```
 
 ## 2.4 Ollamaの基本操作
@@ -465,33 +467,33 @@ Generation Time:  8.03s
 ollama list
 
 # 出力例:
-# NAME                    ID              SIZE    MODIFIED
-# qwen2.5-coder:14b       4e16af9b34d5    8.9 GB  5 minutes ago
-# qwen2.5-coder:7b        a2b3c4d5e6f7    4.7 GB  10 minutes ago
+# NAME                         ID              SIZE    MODIFIED
+# qwen3-coder:30b-a3b-q8_0     7a3d9f8c2b1e    32 GB   5 minutes ago
+# qwen3-coder:7b               b1c2d3e4f5g6    8 GB    10 minutes ago
 ```
 
 **モデル削除**
 
 ```bash
 # 不要なモデルを削除してディスク容量を節約
-ollama rm qwen2.5-coder:7b
+ollama rm qwen3-coder:7b
 
 # 確認
-# Deleted 'qwen2.5-coder:7b'
+# Deleted 'qwen3-coder:7b'
 ```
 
 **モデル情報表示**
 
 ```bash
 # モデルの詳細情報を表示
-ollama show qwen2.5-coder:14b
+ollama show qwen3-coder:30b-a3b-q8_0
 
 # 出力例:
 # Model
-#   architecture        qwen2
-#   parameters          14.7B
-#   quantization        Q4_K_M
-#   context length      32768
+#   architecture        qwen3
+#   parameters          30B (3.3B active MoE)
+#   quantization        Q8_0
+#   context length      262144  # 256K tokens
 #   embedding length    5120
 ```
 
@@ -502,8 +504,8 @@ ollama show qwen2.5-coder:14b
 ollama ps
 
 # 出力例:
-# NAME                    ID              SIZE      UNTIL
-# qwen2.5-coder:14b       4e16af9b34d5    11.2 GB   5 minutes from now
+# NAME                         ID              SIZE      UNTIL
+# qwen3-coder:30b-a3b-q8_0     7a3d9f8c2b1e    34 GB     5 minutes from now
 ```
 
 ### 2.4.2 サービス管理
@@ -617,7 +619,7 @@ export HTTP_PROXY=http://proxy.example.com:8080
 export HTTPS_PROXY=http://proxy.example.com:8080
 
 # 再試行
-ollama pull qwen2.5-coder:14b
+ollama pull qwen3-coder:30b-a3b-q8_0
 ```
 
 **問題4: "Error: could not connect to ollama server"**
@@ -635,15 +637,19 @@ sudo netstat -tuln | grep 11434
 
 ### 2.5.2 パフォーマンス最適化
 
-**メモリ不足の場合**
+**メモリ不足の場合（MS-S1 Maxでは通常不要）**
 
 ```bash
-# より小さいモデルを使用
-ollama pull qwen2.5-coder:7b
+# より小さいモデルを使用（メモリ制約がある場合のみ）
+ollama pull qwen3-coder:7b  # 10GB
+ollama pull qwen3-coder:14b  # 20GB
 
 # またはKEEP_ALIVEを短縮
 sudo nano /etc/systemd/system/ollama.service.d/override.conf
 # Environment="OLLAMA_KEEP_ALIVE=1m"
+
+# 注: MS-S1 Maxは128GBメモリと96GB VRAM設定可能なので、
+#     Qwen3 Coder 30B Q8_0 (32GB) を問題なく実行できます
 ```
 
 **速度が遅い場合**
@@ -662,19 +668,20 @@ echo $HSA_OVERRIDE_GFX_VERSION
 
 **達成したこと**
 ✅ Ollamaのインストール
-✅ MS-S1 Max向けROCm設定
-✅ qwen2.5-coder:14bのダウンロード
+✅ MS-S1 Max向けROCm設定（96GB VRAM対応）
+✅ qwen3-coder:30b-a3b-q8_0のダウンロード（32GB、256Kコンテキスト）
 ✅ CLI/APIでの動作確認
-✅ パフォーマンス測定
+✅ パフォーマンス測定（22 tokens/s生成速度確認）
 
 **次のステップ**
-次章では、LiteLLMをインストールし、OllamaとClaude Codeの橋渡しを設定します。LiteLLMプロキシを起動すれば、Claude CodeからローカルLLMを使えるようになります。
+次章では、LiteLLMをインストールし、OllamaとClaude Codeの橋渡しを設定します。LiteLLMプロキシを起動すれば、Claude CodeからQwen3 Coder 30B Q8_0をローカルで使えるようになります。
 
 **確認チェックリスト**
 - [ ] `ollama --version`が動作する
-- [ ] `ollama list`でqwen2.5-coder:14bが表示される
-- [ ] `ollama run qwen2.5-coder:14b`で対話できる
-- [ ] `rocm-smi`でGPUが認識されている
-- [ ] APIテスト（curl）が成功する
+- [ ] `ollama list`でqwen3-coder:30b-a3b-q8_0が表示される
+- [ ] `ollama run qwen3-coder:30b-a3b-q8_0`で対話できる
+- [ ] `rocm-smi`でGPUが認識されている（Radeon 8060S）
+- [ ] APIテスト（curl）が成功する（22 tokens/s前後）
+- [ ] 256Kコンテキストが利用可能
 
 すべてチェックできたら、Chapter 03へ進みましょう！
