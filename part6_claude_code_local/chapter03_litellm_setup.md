@@ -140,13 +140,204 @@ general_settings:
   master_key: sk-1234  # 任意のキー（ローカルなので簡易的でOK）
 ```
 
-**設定の説明**
-- `model_name`: Claude Codeが指定するモデル名
-- `litellm_params.model`: 実際に使用するOllamaモデル
-- `api_base`: OllamaのエンドポイントURL
-- `master_key`: LiteLLMプロキシの認証キー
+**📖 各設定項目の詳細解説**
 
-### 3.3.2 高度な設定ファイル
+**1. model_list セクション（必須）**
+
+```yaml
+model_list:  # ← 複数モデルを定義できる配列
+  - model_name: claude-3-5-sonnet-20241022  # ← クライアントが指定する名前
+```
+
+**💡 `model_name` とは？**
+- **目的**: Claude CodeやAiderがAPIリクエストで指定するモデル名
+- **あなたの環境**: そのまま使用（変更不要）
+- **カスタマイズ**: 他のツールを使う場合は対応するモデル名に変更
+- **例**: Cursorなら `gpt-4`, Continue.devなら `claude-3-5-sonnet`
+
+**2. litellm_params セクション（必須）**
+
+```yaml
+    litellm_params:
+      model: ollama/qwen3-coder:30b-a3b-q8_0
+```
+
+**💡 `model` パラメータ**
+- **目的**: 実際に使用するOllamaモデルを指定
+- **形式**: `ollama/<モデル名>`
+- **あなたの環境**:
+  - MS-S1 Maxなら: `ollama/qwen3-coder:30b-a3b-q8_0`（推奨）
+  - メモリ少なめなら: `ollama/qwen3-coder:14b` または `ollama/qwen3-coder:7b`
+- **変更方法**: Ollamaでダウンロード済みのモデル名を指定
+- **確認コマンド**: `ollama list` で利用可能なモデルを表示
+
+```yaml
+      api_base: http://localhost:11434
+```
+
+**💡 `api_base` パラメータ**
+- **目的**: OllamaのAPIエンドポイントURL
+- **デフォルト**: `http://localhost:11434`
+- **あなたの環境**:
+  - ローカルで動かす場合: **変更不要**
+  - 別マシンのOllamaを使う場合: `http://<IPアドレス>:11434`
+  - ポートを変更している場合: `http://localhost:<別ポート>`
+
+```yaml
+      temperature: 0.7
+```
+
+**💡 `temperature` パラメータ（オプション・重要）**
+- **目的**: 生成結果のランダム性を制御
+- **範囲**: 0.0 〜 2.0
+- **デフォルト**: 0.7
+- **あなたの環境**:
+  ```
+  temperature: 0.1  ← 決定論的（毎回同じ結果）
+              ↓     　 用途: テスト、再現性重視
+  temperature: 0.7  ← バランス型（推奨）
+              ↓        用途: 通常のコーディング
+  temperature: 1.5  ← 創造的（多様な結果）
+              ↓        用途: アイデア出し、ブレスト
+  ```
+- **変更推奨**:
+  - コードレビュー: `0.3`（一貫性重視）
+  - 通常開発: `0.7`（そのまま）
+  - アイデア生成: `1.2`（多様性重視）
+
+```yaml
+      max_tokens: 4096
+```
+
+**💡 `max_tokens` パラメータ（オプション）**
+- **目的**: 1回の応答で生成する最大トークン数
+- **範囲**: 1 〜 256000（モデルの上限まで）
+- **デフォルト**: 4096
+- **あなたの環境**:
+  ```
+  max_tokens: 1024   ← 短い応答（簡単な質問）
+  max_tokens: 4096   ← 標準（推奨）
+  max_tokens: 8192   ← 長い応答（ドキュメント生成）
+  max_tokens: 16384  ← 非常に長い（大規模生成）
+  ```
+- **影響**:
+  - 大きい値: 長い応答が可能だが時間がかかる
+  - 小さい値: 高速だが途中で切れる可能性
+- **推奨**: `4096`（ほとんどのケースで十分）
+
+```yaml
+      num_ctx: 262144  # 256K tokens context
+```
+
+**💡 `num_ctx` パラメータ（重要・Qwen3特有）**
+- **目的**: モデルが処理できるコンテキストウィンドウサイズ
+- **Qwen3 Coder 30B Q8_0の上限**: 262144（256K tokens）
+- **あなたの環境**:
+  ```yaml
+  num_ctx: 262144   # ← Qwen3 Coder推奨（256K）
+  # ✅ 大規模ファイルを処理可能
+  # ✅ 複数ファイルを同時に読み込み可能
+  # ⚠️ メモリ使用量が増加（MS-S1 Maxなら問題なし）
+
+  num_ctx: 131072   # ← 128K（メモリ節約）
+  # ✅ 中規模ファイル対応
+  # ✅ メモリ使用量削減
+
+  num_ctx: 32768    # ← 32K（軽量）
+  # ⚠️ 小規模ファイルのみ
+  # ❌ 大規模コードベースには不向き
+  ```
+- **MS-S1 Maxユーザー**: **262144を推奨**（メモリに余裕あり）
+- **変更が必要な場合**: メモリ不足エラーが出たら小さくする
+
+**3. general_settings セクション（必須）**
+
+```yaml
+general_settings:
+  master_key: sk-1234
+```
+
+**💡 `master_key` パラメータ**
+- **目的**: LiteLLMプロキシへのアクセス認証
+- **形式**: 任意の文字列（`sk-`で始めるのが慣例）
+- **あなたの環境**:
+  - **ローカル環境**: `sk-1234`など簡易的なキーでOK
+  - **外部公開する場合**: 長くランダムな文字列を使用
+  - **例**: `sk-local-dev-1234`, `sk-test`, `sk-my-secret-key`
+- **重要**: この値を覚えておき、クライアント（Aider等）の設定で同じ値を使用
+
+**📌 設定ファイルのテンプレート（コピペ用）**
+
+```yaml
+# ~/litellm/config.yaml
+# 【最小構成】MS-S1 Max + Qwen3 Coder 30B Q8_0向け
+
+model_list:
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: ollama/qwen3-coder:30b-a3b-q8_0
+      api_base: http://localhost:11434
+      temperature: 0.7              # ← 必要に応じて調整（0.3〜1.2）
+      max_tokens: 4096              # ← 長い応答が必要なら8192に変更
+      num_ctx: 262144               # ← MS-S1 Maxならこのまま
+
+general_settings:
+  master_key: sk-local-dev-1234    # ← 任意の値に変更可能
+```
+
+**🔧 あなたの環境に合わせたカスタマイズ例**
+
+**ケース1: メモリ64GB以下のマシンの場合**
+```yaml
+model_list:
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: ollama/qwen3-coder:14b  # ← 軽量モデルに変更
+      api_base: http://localhost:11434
+      temperature: 0.7
+      max_tokens: 4096
+      num_ctx: 131072                 # ← 128Kに削減
+```
+
+**ケース2: 速度重視の場合**
+```yaml
+model_list:
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: ollama/qwen3-coder:7b    # ← 高速モデル
+      api_base: http://localhost:11434
+      temperature: 0.7
+      max_tokens: 2048                 # ← 短い応答で高速化
+      num_ctx: 262144
+```
+
+**ケース3: 決定論的（再現性重視）**
+```yaml
+model_list:
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: ollama/qwen3-coder:30b-a3b-q8_0
+      api_base: http://localhost:11434
+      temperature: 0.1                 # ← 低温度で一貫性
+      max_tokens: 4096
+      num_ctx: 262144
+```
+
+**❓ よくある質問**
+
+**Q: すべてのパラメータを設定する必要がありますか？**
+A: いいえ。`model_list.model_name`、`litellm_params.model`、`general_settings.master_key`の3つのみ必須です。他はデフォルト値が使われます。
+
+**Q: temperature や max_tokens を省略するとどうなりますか？**
+A: デフォルト値（temperature: 0.7, max_tokens: 無制限）が使われます。
+
+**Q: 設定を間違えたらどうなりますか？**
+A: LiteLLM起動時にエラーメッセージが表示されます。構文エラーなら起動せず、パラメータエラーならリクエスト時にエラーが出ます。
+
+**Q: 後から設定を変更できますか？**
+A: はい。config.yamlを編集後、LiteLLMを再起動すれば反映されます。
+
+### 3.3.2 高度な設定ファイル（オプション）
 
 複数モデル、キャッシュ、ログを有効にした設定：
 

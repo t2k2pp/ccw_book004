@@ -115,40 +115,293 @@ echo $OPENAI_API_MODEL
 
 ### 4.2.2 Aider設定ファイルの作成
 
-Aider専用の設定ファイルを作成します。
+**【必須】Aider専用の設定ファイルを作成します。**
 
 ```bash
 # ホームディレクトリに設定ファイルを作成
 nano ~/.aider.conf.yml
 ```
 
+**基本設定（コピペ用）**
+
 ```yaml
 # ~/.aider.conf.yml
+# 【基本構成】MS-S1 Max + Qwen3 Coder 30B Q8_0向け
 
-# APIエンドポイント
+# APIエンドポイント（必須）
 openai-api-base: http://localhost:8000/v1
 openai-api-key: sk-local-dev-1234
 
-# モデル設定
+# モデル設定（必須）
 model: claude-3-5-sonnet-20241022
 
-# コンテキスト設定
-map-tokens: 4096  # マップ用トークン数
-max-chat-history-tokens: 8192  # チャット履歴
+# コンテキスト設定（重要）
+map-tokens: 4096
+max-chat-history-tokens: 8192
 
-# 機能設定
-auto-commits: true  # 自動コミット
-dirty-commits: true  # 変更をコミット
-git: true  # Git統合を有効化
-stream: true  # ストリーミング有効化
+# 機能設定（オプション）
+auto-commits: true
+dirty-commits: true
+git: true
+stream: true
 
-# エディタ設定
-editor: nano  # またはvim、code等
+# エディタ設定（オプション）
+editor: nano
 
-# ログ設定
+# ログ設定（オプション）
 verbose: false
 show-diffs: true
 ```
+
+**📖 各設定項目の詳細解説**
+
+**1. API接続設定（必須）**
+
+```yaml
+openai-api-base: http://localhost:8000/v1
+```
+
+**💡 `openai-api-base` とは？**
+- **目的**: LiteLLMプロキシのAPIエンドポイント
+- **デフォルト**: `http://localhost:8000/v1`
+- **あなたの環境**:
+  - **ローカル**: そのまま使用（変更不要）
+  - **別マシンのLiteLLM**: `http://<IPアドレス>:8000/v1`
+  - **ポート変更時**: `http://localhost:<別ポート>/v1`
+- **重要**: 末尾の `/v1` を忘れないこと
+
+```yaml
+openai-api-key: sk-local-dev-1234
+```
+
+**💡 `openai-api-key` とは？**
+- **目的**: LiteLLM認証キー
+- **あなたの環境**: LiteLLMの`config.yaml`で設定した`master_key`と**同じ値**を使用
+- **例**:
+  - LiteLLMで `master_key: sk-1234` なら、ここも `sk-1234`
+  - LiteLLMで `master_key: sk-local-dev-1234` なら、ここも `sk-local-dev-1234`
+- **確認方法**: `cat ~/litellm/config.yaml | grep master_key`
+
+**2. モデル設定（必須）**
+
+```yaml
+model: claude-3-5-sonnet-20241022
+```
+
+**💡 `model` パラメータ**
+- **目的**: 使用するモデルを指定
+- **デフォルト**: `claude-3-5-sonnet-20241022`
+- **あなたの環境**:
+  - **MS-S1 Max（推奨）**: `claude-3-5-sonnet-20241022`（Qwen3 30B Q8_0にマップ）
+  - **速度重視**: `gpt-3.5-turbo`（Qwen3 14Bにマップ）
+  - **最速**: `claude-3-haiku-20240307`（Qwen3 7Bにマップ）
+- **対応関係**: LiteLLMの`config.yaml`で定義したモデル名を使用
+
+```
+【モデル選択の目安】
+claude-3-5-sonnet-20241022  ← 最高品質（22 tokens/s）
+       ↓                        用途: 本番コード、レビュー
+gpt-3.5-turbo               ← 高速（28 tokens/s）
+       ↓                        用途: 通常開発、実験
+claude-3-haiku-20240307     ← 最速（42 tokens/s）
+                                用途: クイック質問、学習
+```
+
+**3. コンテキスト設定（重要・パフォーマンスに影響）**
+
+```yaml
+map-tokens: 4096
+```
+
+**💡 `map-tokens` パラメータ**
+- **目的**: コードベースマップ（ファイル一覧・構造）に使うトークン数
+- **デフォルト**: 1024
+- **あなたの環境**:
+  ```yaml
+  map-tokens: 2048   # ← 小規模プロジェクト（10ファイル未満）
+  map-tokens: 4096   # ← 推奨・中規模（10〜50ファイル）
+  map-tokens: 8192   # ← 大規模プロジェクト（50ファイル以上）
+  map-tokens: 0      # ← マップ無効化（最軽量）
+  ```
+- **影響**:
+  - 大きい: プロジェクト全体を理解しやすいがメモリ消費増
+  - 小さい: メモリ節約だが全体把握が困難
+- **MS-S1 Max推奨**: `8192`（余裕あり）
+
+```yaml
+max-chat-history-tokens: 8192
+```
+
+**💡 `max-chat-history-tokens` パラメータ**
+- **目的**: 会話履歴に使うトークン数
+- **デフォルト**: 2048
+- **あなたの環境**:
+  ```yaml
+  max-chat-history-tokens: 4096   # ← 短期会話（5〜10往復）
+  max-chat-history-tokens: 8192   # ← 推奨・通常（10〜20往復）
+  max-chat-history-tokens: 16384  # ← 長期会話（20往復以上）
+  max-chat-history-tokens: 32768  # ← 非常に長い（MS-S1 Max向け）
+  ```
+- **影響**:
+  - 大きい: 長い会話の文脈を保持、メモリ消費増
+  - 小さい: メモリ節約だが過去の会話を忘れやすい
+- **MS-S1 Max推奨**: `16384`（256Kコンテキストを活かす）
+
+**4. Git統合設定（オプション・便利）**
+
+```yaml
+auto-commits: true
+```
+
+**💡 `auto-commits` パラメータ**
+- **目的**: コード変更時に自動でGitコミット
+- **デフォルト**: false
+- **あなたの環境**:
+  - `true`: **推奨**・変更を自動記録、履歴管理が楽
+  - `false`: 手動コミット、自分でタイミング制御
+- **メリット**: 変更履歴が自動で残る、ロールバック簡単
+- **デメリット**: コミットが増える（gitログが多い）
+
+```yaml
+dirty-commits: true
+```
+
+**💡 `dirty-commits` パラメータ**
+- **目的**: 未コミットの変更がある状態でもコミット可能
+- **デフォルト**: false
+- **あなたの環境**:
+  - `true`: **推奨**・柔軟に作業可能
+  - `false`: クリーンな状態のみコミット（厳格）
+- **推奨**: `auto-commits: true`なら`dirty-commits: true`も有効化
+
+```yaml
+git: true
+```
+
+**💡 `git` パラメータ**
+- **目的**: Git統合機能を有効化
+- **デフォルト**: true
+- **あなたの環境**:
+  - `true`: **推奨**・Git機能を使う
+  - `false`: Git不使用（Gitリポジトリでない場合）
+- **前提**: プロジェクトが`git init`済みであること
+
+**5. ユーザー体験設定（オプション）**
+
+```yaml
+stream: true
+```
+
+**💡 `stream` パラメータ**
+- **目的**: レスポンスをリアルタイム表示
+- **デフォルト**: true
+- **あなたの環境**:
+  - `true`: **推奨**・タイプライター風表示、待ち時間短く感じる
+  - `false`: 完全生成後に一括表示
+- **推奨**: `true`（ユーザー体験向上）
+
+```yaml
+editor: nano
+```
+
+**💡 `editor` パラメータ**
+- **目的**: `/editor`コマンドで使うエディタ
+- **デフォルト**: システムのデフォルト
+- **あなたの環境**:
+  - `nano`: 初心者向け（簡単）
+  - `vim`: Vimユーザー向け
+  - `code`: VSCode使用者向け
+  - `emacs`: Emacsユーザー向け
+- **変更方法**: 好みのエディタ名を指定
+
+```yaml
+verbose: false
+show-diffs: true
+```
+
+**💡 `verbose` / `show-diffs` パラメータ**
+- **verbose**: デバッグ情報を表示
+  - `false`: **推奨**・通常使用
+  - `true`: トラブルシューティング時のみ
+- **show-diffs**: 変更前後の差分を表示
+  - `true`: **推奨**・何が変わったか確認しやすい
+  - `false`: 差分非表示（シンプル）
+
+**🔧 環境別のカスタマイズ例**
+
+**ケース1: MS-S1 Max向け最適化（推奨）**
+
+```yaml
+# 大容量メモリを活かした設定
+openai-api-base: http://localhost:8000/v1
+openai-api-key: sk-local-dev-1234
+model: claude-3-5-sonnet-20241022
+
+# コンテキストを大きく
+map-tokens: 8192                    # ← 大規模プロジェクト対応
+max-chat-history-tokens: 16384      # ← 長い会話対応
+
+# Git自動化
+auto-commits: true
+dirty-commits: true
+git: true
+stream: true
+editor: nano
+verbose: false
+show-diffs: true
+```
+
+**ケース2: メモリ節約型（64GB以下）**
+
+```yaml
+# 軽量設定
+openai-api-base: http://localhost:8000/v1
+openai-api-key: sk-local-dev-1234
+model: gpt-3.5-turbo                # ← 軽量モデル
+
+# コンテキストを抑える
+map-tokens: 2048                    # ← 小規模対応
+max-chat-history-tokens: 4096       # ← 短期会話
+
+# 基本機能のみ
+auto-commits: true
+git: true
+stream: true
+```
+
+**ケース3: 速度最優先**
+
+```yaml
+# 高速設定
+openai-api-base: http://localhost:8000/v1
+openai-api-key: sk-local-dev-1234
+model: claude-3-haiku-20240307      # ← 最速モデル
+
+# コンテキスト最小
+map-tokens: 0                       # ← マップ無効化
+max-chat-history-tokens: 2048       # ← 最小
+
+auto-commits: false                 # ← 手動制御で高速化
+git: true
+stream: true
+```
+
+**❓ よくある質問**
+
+**Q: すべての設定を書く必要がありますか？**
+A: いいえ。`openai-api-base`、`openai-api-key`、`model`の3つのみ必須です。他は省略するとデフォルト値が使われます。
+
+**Q: 設定を間違えたらどうなりますか？**
+A: Aider起動時にエラーメッセージが表示されます。typoに注意してください。
+
+**Q: 後から設定を変更できますか？**
+A: はい。`~/.aider.conf.yml`を編集し、Aiderを再起動すれば反映されます。
+
+**Q: 起動時にオプションで上書きできますか？**
+A: はい。例: `aider --model gpt-3.5-turbo --map-tokens 2048`で一時的に変更可能です。
+
+**Q: どの設定が自分に必要か判断できない**
+A: **MS-S1 Maxなら上記の「ケース1: 最適化」をそのままコピペしてください。**他の環境なら、まず基本設定で試してから調整してください。
 
 ### 4.2.3 動作確認
 
